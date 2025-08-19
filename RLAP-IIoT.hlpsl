@@ -1,0 +1,129 @@
+role user(Ui, CS, Dj: agent,Par_secret1:text,H,FE,EM:hash_func, Snd, Rcv: channel (dy))
+played_by Ui
+def=
+  local State: nat,
+  TIDui,MTNui,PIDui,IDdk,R1,R2,R3,R5,R6,TIDuinew,Skucc:text,
+  CRa1,Ka1,CRa6,Ka7,SKuc,SKud:message
+
+  init State := 0
+
+  transition
+    1. State = 0 /\ Rcv(start) =|>
+       State':= 1/\
+       R1':=new()/\
+       CRa1':=EM(R1')/\
+       R2':=new()/\
+       R3':=new()/\
+       Ka1':=H(R2'.TIDui.Par_secret1)/\
+       Snd(TIDui.R2'.{PIDui.IDdk.CRa1'.R3'}_Ka1')
+
+    2. State=1/\Rcv({R5'.R6'.TIDuinew'.CRa6'}_Ka7')/\Ka7'=H(R3.Par_secret1)=|>
+       State':=2/\
+       SKuc':=H(PIDui.Par_secret1.R5'.R3)/\
+       SKud':=H(PIDui.IDdk.EM(CRa1.CRa6').R3.R6')/\
+       request(Ui,CS,auth1,R5')
+
+end role
+
+
+role server(Ui, CS, Dj: agent,
+Par_secret1,Par_secret2:text,
+  H,FE,EM:hash_func,
+  Snd, Rcv: channel(dy))
+played_by CS
+def=
+    local State: nat,
+      TIDui,MTNui,IDdk,CRdr1,RSdk,PIDui,R2,R3,R4,R5,R6,TIDuinew:text,
+      CRa1,Ka1,Ka4,Ka5,CRa6,Kdk,SKuc,SKdc,Ka7:message
+
+    init State :=0
+
+    transition
+     1.State = 0 /\Rcv(TIDui.R2'.{PIDui.IDdk.CRa1'.R3'}_Ka1')/\Ka1'=H(R2'.TIDui.Par_secret1)=|>
+       State':=1/\
+       R4':=new()/\
+       R5':=new()/\
+       Ka4':=H(R4'.Par_secret2)/\
+       Snd(R4'.{PIDui.RSdk.R3'.R5'.CRa1'}_Ka4')
+
+     2.State=1/\Rcv({R6'.CRa6'}_Ka5')/\Ka5'=H(R4.Par_secret2.R5)=|>
+       State':=2/\
+       Kdk':=FE(RSdk)/\
+       SKuc':=H(PIDui.Par_secret1.R5.R3)/\
+       SKdc':=H(IDdk.Par_secret2.Kdk'.R5.R6')/\
+       TIDuinew':=new()/\
+       Ka7':=H(R3.Par_secret1)/\
+       Snd({R5.R6'.TIDuinew'.CRa6'}_Ka7')/\
+       secret(SKuc',s3,{Ui,CS})/\
+       witness(CS,Ui,auth1,R5)
+
+
+end role
+
+
+role device(Ui,CS,Dj:agent,
+  Par_secret2:text,
+  H,FE,EM: hash_func,
+  Snd, Rcv: channel(dy))
+played_by Dj
+def=
+    local
+      State: nat,
+      RSdk,R4,R3,R5,PIDui,R6,R7,IDdk:text,
+      CRa1,Ka4,Kdk,SKdc,SKud,CRa6,Ka5:message
+
+    init State := 0
+    transition
+        1. State=0/\Rcv(R4'.{PIDui.RSdk.R3'.R5'.CRa1'}_Ka4')/\Ka4'=H(R4'.Par_secret2) =|>
+           State':=1/\
+           Kdk':=FE(RSdk)/\
+           R6':=new()/\
+           R7':=new()/\
+           SKdc':=H(IDdk.Par_secret2.Kdk'.R5'.R6')/\
+           CRa6':=EM(R7')/\
+           SKud':=H(PIDui.IDdk.EM(CRa1'.CRa6').R3'.R6')/\
+           Ka5':=H(R4'.Par_secret2.R5')/\
+           secret(SKdc',s1,{CS,Dj})/\
+           secret(SKud',s2,{Ui,Dj})/\
+           Snd({R6'.CRa6'}_Ka5')
+
+end role
+
+
+role session(Ui, CS, Dj: agent, Par_secret1,Par_secret2:text,H,FE,EM:hash_func)
+def=
+    local US, UR, SS, SR, VS, VR: channel(dy)
+    composition
+        user(Ui, CS, Dj,Par_secret1,H,FE,EM, US, UR) /\
+        server(Ui, CS, Dj,Par_secret1,Par_secret2,H,FE,EM,SS,SR) /\
+        device(Ui, CS, Dj,Par_secret2,H,FE,EM,VS,VR)
+end role
+
+
+role environment()
+def=
+    const ui, cs, dj: agent,
+    h,fe,em: hash_func,
+    par_secret1,par_secret2:text,
+    s1,s2,s3,s4,auth1: protocol_id
+
+    intruder_knowledge = {ui,cs,dj,h,fe,em}
+
+%In the proposed scheme, the server is considered a secure and indestructible entity
+%while the user terminals are protected by AEGIS encryption pairs constructed based on password and biometric factors
+%Therefore, only the knowledge that intruders have about device Dj is taken into consideration
+    composition
+        session(ui,cs,dj,par_secret1,par_secret2,h,fe,em)/\
+        session(ui,cs,i,par_secret1,par_secret2,h,fe,em)
+end role
+
+goal
+  secrecy_of s1
+  secrecy_of s2
+  secrecy_of s3
+  secrecy_of s4
+  authentication_on auth1
+end goal
+
+environment()
+
