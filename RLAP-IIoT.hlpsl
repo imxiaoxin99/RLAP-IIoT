@@ -55,7 +55,9 @@ def=
        Ka7':=H(R3.Par_secret1)/\
        Snd({R5.R6'.TIDuinew'.CRa6'}_Ka7')/\
        secret(SKuc',s3,{Ui,CS})/\
-       witness(CS,Ui,auth1,R5)
+       witness(CS,Ui,auth1,R5)/\
+       request(CS,Dj,auth2,R6')
+
 
 
 end role
@@ -85,7 +87,8 @@ def=
            Ka5':=H(R4'.Par_secret2.R5')/\
            secret(SKdc',s1,{CS,Dj})/\
            secret(SKud',s2,{Ui,Dj})/\
-           Snd({R6'.CRa6'}_Ka5')
+           Snd({R6'.CRa6'}_Ka5')/\
+           witness(Dj,CS,auth2,R6')
 
 end role
 
@@ -105,7 +108,7 @@ def=
     const ui, cs, dj: agent,
     h,fe,em: hash_func,
     par_secret1,par_secret2:text,
-    s1,s2,s3,s4,auth1: protocol_id
+    s1,s2,s3,s4,auth1,auth2,auth3: protocol_id
 
     intruder_knowledge = {ui,cs,dj,h,fe,em}
 
@@ -123,6 +126,7 @@ goal
   secrecy_of s3
   secrecy_of s4
   authentication_on auth1
+  authentication_on auth2
 end goal
 
 environment()
